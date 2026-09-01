@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Studybench — an agent-native study workspace</title>
+<meta name="description" content="A spaced-repetition study workspace that exposes its entire functionality as WebMCP tools, so an AI agent can build, drill and plan alongside you." />
+<meta name="color-scheme" content="dark" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%237b6ef6'/%3E%3Cpath d='M9 10h6a4 4 0 0 1 4 4v9' stroke='%230a0b0f' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E" />
+<link rel="preload" href="./fonts/inter-var.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="./fonts/instrument-serif.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- ───────────────────────── sidebar ───────────────────────── -->
+  <aside class="sidebar">
+    <a class="brand" href="./" aria-label="Studybench home">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
+          <rect x="4" y="7.5" width="12" height="12.5" rx="2.5" />
+          <path d="M8.5 4h8A3.5 3.5 0 0 1 20 7.5v8" />
+        </svg>
+      </span>
+      <span class="brand-text">
+        <span class="brand-name">Studybench</span>
+        <span class="brand-sub">agent-native study</span>
+      </span>
+    </a>
+
+    <button class="search-btn" id="search-btn" type="button">
+      <span id="search-ico"></span><span>Search or run…</span><span class="kbd">⌘K</span>
+    </button>
+
+    <nav class="nav" id="nav" aria-label="Views"></nav>
+
+    <div class="side-block">
+      <div class="side-label">Readiness</div>
+      <div class="spectrum" id="spectrum" role="img" aria-label="Mastery across topics"></div>
+      <div class="spectrum-legend">
+        <span><i data-band="low"></i>shaky</span>
+        <span><i data-band="mid"></i>getting there</span>
+        <span><i data-band="high"></i>solid</span>
+      </div>
+    </div>
+
+    <div class="side-block countdown" id="exam-card"></div>
+
+    <div class="sidebar-foot">
+      <div class="host-pill" id="host-pill" title="Which WebMCP entry point this browser exposes">
+        <span class="dot" aria-hidden="true"></span><span id="host-text">checking…</span>
+      </div>
+      <button class="ghost-btn" id="reset-btn" type="button"></button>
+    </div>
+  </aside>
+
+  <!-- ───────────────────────── main ───────────────────────── -->
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-lead">
+        <h1 id="view-title">Library</h1>
+        <p class="briefing" id="briefing"></p>
+      </div>
+      <div class="topbar-actions" id="topbar-actions"></div>
+    </header>
+
+    <div class="views" id="views">
+      <section class="view is-active" id="view-library" tabindex="-1"></section>
+      <section class="view" id="view-review" tabindex="-1"></section>
+      <section class="view" id="view-plan" tabindex="-1"></section>
+      <section class="view" id="view-activity" tabindex="-1"></section>
+    </div>
+  </main>
+
+  <!-- ───────────────────────── agent panel ───────────────────────── -->
+  <aside class="agent" id="agent-panel" aria-label="Agent">
+    <div class="agent-head">
+      <div class="agent-tabs" id="agent-tabs" role="tablist"></div>
+      <button class="icon-btn" id="collapse-btn" type="button" title="Hide panel" aria-label="Hide agent panel"></button>
+    </div>
+
+    <div class="agent-body">
+      <div class="agent-pane is-active" id="pane-chat">
+        <div class="chat-log" id="chat-log"></div>
+        <form class="chat-form" id="chat-form">
+          <textarea id="chat-input" rows="2" placeholder="Ask the agent to build cards, quiz you, or plan your revision…"></textarea>
+          <button type="submit" id="chat-send" aria-label="Send"></button>
+        </form>
+        <div class="chat-hints" id="chat-hints"></div>
+      </div>
+
+      <div class="agent-pane" id="pane-tools">
+        <p class="pane-note">Registered with this page's WebMCP host and callable by any connected agent. Run one by hand to see exactly what an agent sees.</p>
+        <div id="tool-list"></div>
+      </div>
+
+      <div class="agent-pane" id="pane-feed">
+        <p class="pane-note">Every invocation — from the built-in agent, a browser agent, or a manual run — with its arguments, result and latency.</p>
+        <div id="feed-list"></div>
+      </div>
+    </div>
+  </aside>
+
+  <button class="expand-btn" id="expand-btn" type="button" hidden>Agent</button>
+</div>
+
+<dialog class="confirm" id="confirm-dialog">
+  <p class="confirm-tag">The agent is asking permission</p>
+  <p class="confirm-msg" id="confirm-msg"></p>
+  <div class="confirm-actions">
+    <button class="btn btn-quiet" id="confirm-no" type="button">Don't do it</button>
+    <button class="btn btn-danger" id="confirm-yes" type="button">Allow</button>
+  </div>
+</dialog>
+
+<dialog class="palette" id="palette" aria-label="Command palette">
+  <input id="pal-input" placeholder="Jump to a view, drill a topic, or run a WebMCP tool…" autocomplete="off" spellcheck="false" />
+  <div class="pal-list" id="pal-list"></div>
+  <div class="pal-foot">
+    <span><span class="kbd">↑</span><span class="kbd">↓</span> move</span>
+    <span><span class="kbd">↵</span> run</span>
+    <span><span class="kbd">esc</span> close</span>
+  </div>
+</dialog>
+
+<div class="toast-stack" id="toasts" aria-live="polite"></div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
